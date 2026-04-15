@@ -37,6 +37,11 @@ const (
 	SandboxTemplateRefAnnotation = "agents.x-k8s.io/sandbox-template-ref"
 	// SandboxPodTemplateHashLabel is the label used to track the pod template hash.
 	SandboxPodTemplateHashLabel = "agents.x-k8s.io/sandbox-pod-template-hash"
+
+	// SandboxClaimedByAnnotation records which SandboxClaim UID has claimed this sandbox.
+	// Protected by MergeFromWithOptimisticLock (resourceVersion CAS).
+	// Set during warm pool adoption.
+	SandboxClaimedByAnnotation = "agents.x-k8s.io/claimed-by"
 )
 
 type PodMetadata struct {
