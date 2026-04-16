@@ -94,6 +94,14 @@ var (
 	// - expired: "true" | "false"
 	// - launch_type: "warm" | "cold"
 	// - sandbox_template: sandboxTemplateRef
+	AdoptionConflictsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "agent_sandbox_adoption_conflicts_total",
+			Help: "Total number of 409 Conflict errors during warm pool sandbox adoption.",
+		},
+		[]string{"namespace"},
+	)
+
 	AgentSandboxesDesc = prometheus.NewDesc(
 		"agent_sandboxes",
 		"Monitor the point-in-time number of sandboxes in the cluster.",
@@ -108,6 +116,7 @@ func init() {
 	metrics.Registry.MustRegister(ClaimControllerStartupLatency)
 	metrics.Registry.MustRegister(SandboxCreationLatency)
 	metrics.Registry.MustRegister(SandboxClaimCreationTotal)
+	metrics.Registry.MustRegister(AdoptionConflictsTotal)
 }
 
 // RecordClaimStartupLatency records the duration since the provided start time.

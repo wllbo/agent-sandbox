@@ -41,6 +41,11 @@ const (
 	SandboxPropagatedLabelsAnnotation = "agents.x-k8s.io/propagated-labels"
 	// SandboxPropagatedAnnotationsAnnotation is the annotation used to track the annotations explicitly propagated from sandbox spec to pod.
 	SandboxPropagatedAnnotationsAnnotation = "agents.x-k8s.io/propagated-annotations"
+
+	// SandboxClaimedByAnnotation records which SandboxClaim UID has reserved
+	// this sandbox during warm pool adoption. Written via MergeFromWithOptimisticLock
+	// before the heavyweight ownership Update to prevent contention.
+	SandboxClaimedByAnnotation = "agents.x-k8s.io/claimed-by"
 )
 
 type PodMetadata struct {

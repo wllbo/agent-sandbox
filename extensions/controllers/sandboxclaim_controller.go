@@ -501,6 +501,21 @@ func (r *SandboxClaimReconciler) adoptSandboxFromCandidates(ctx context.Context,
 
 		logger.Info("Attempting sandbox adoption", "sandbox candidate", adopted.Name, "warm pool", poolName, "claim", claim.Name)
 
+		claimUID := string(claim.UID)
+		patch := client.MergeFromWithOptions(adopted.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		if adopted.Annotations == nil {
+			adopted.Annotations = make(map[string]string)
+		}
+		adopted.Annotations[v1alpha1.SandboxClaimedByAnnotation] = claimUID
+		if err := r.Patch(ctx, adopted, patch); err != nil {
+			if k8errors.IsConflict(err) || k8errors.IsNotFound(err) {
+				asmetrics.AdoptionConflictsTotal.WithLabelValues(claim.Namespace).Inc()
+				continue
+			}
+			logger.Error(err, "Failed to patch claimed-by annotation", "sandbox candidate", adopted.Name, "claim", claim.Name)
+			return nil, err
+		}
+
 		// Remove warm pool labels so the sandbox no longer appears in warm pool queries
 		delete(adopted.Labels, warmPoolSandboxLabel)
 		delete(adopted.Labels, sandboxTemplateRefHash)
@@ -543,7 +558,7 @@ func (r *SandboxClaimReconciler) adoptSandboxFromCandidates(ctx context.Context,
 		// claims racing to adopt the same sandbox will conflict and retry.
 		if err := r.Update(ctx, adopted); err != nil {
 			if k8errors.IsConflict(err) || k8errors.IsNotFound(err) {
-				// Another worker adopted this sandbox while we were processing; try next candidate.
+				asmetrics.AdoptionConflictsTotal.WithLabelValues(claim.Namespace).Inc()
 				continue
 			}
 			logger.Error(err, "Failed to update adoption candidate sandbox", "sandbox candidate", adopted.Name, "claim", claim.Name)
@@ -823,6 +838,10 @@ func (r *SandboxClaimReconciler) getOrCreateSandbox(ctx context.Context, claim *
 		}
 		controllerRef := metav1.GetControllerOf(sb)
 		if controllerRef != nil && controllerRef.Kind != "SandboxWarmPool" {
+			continue
+		}
+
+		if claimedBy, ok := sb.Annotations[v1alpha1.SandboxClaimedByAnnotation]; ok && claimedBy != "" && claimedBy != string(claim.UID) {
 			continue
 		}
 
